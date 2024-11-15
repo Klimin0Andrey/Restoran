@@ -43,13 +43,62 @@ class PasswordWindow(QWidget):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        # Здесь можно добавить код для проверки логина и пароля из базы данных
-        if username == "admin" and password == "admin":
-            QMessageBox.information(self, "Успех", "Добро пожаловать, администратор!")
-        elif username == "user" and password == "user":
-            QMessageBox.information(self, "Успех", "Добро пожаловать, пользователь!")
-        else:
+        if not username or not password:
+            QMessageBox.warning(self, "Ошибка", "Введите логин и пароль!")
+            return
+
+        try:
+            conn = sqlite3.connect("restoran.db")  # Замените на путь к вашей базе данных
+            cursor = conn.cursor()
+
+            # Проверяем пользователя среди клиентов
+            cursor.execute("""
+                SELECT Role FROM Customers WHERE Login = ? AND Password = ?
+            """, (username, password))
+            customer = cursor.fetchone()
+
+            if customer:
+                role = customer[0]
+                QMessageBox.information(self, "Успех", f"Добро пожаловать, {role}!")
+                self.open_user_window(role)
+                return
+
+            # Проверяем пользователя среди сотрудников
+            cursor.execute("""
+                SELECT Role FROM Employees WHERE Login = ? AND Password = ?
+            """, (username, password))
+            employee = cursor.fetchone()
+
+            if employee:
+                role = employee[0]
+                QMessageBox.information(self, "Успех", f"Добро пожаловать, {role}!")
+                self.open_user_window(role)
+                return
+
+            # Если пользователь не найден
             QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль.")
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка работы с базой данных: {e}")
+        finally:
+            if conn:
+                conn.close()
+
+    def open_user_window(self, role):
+        """
+        Метод для открытия окна пользователя в зависимости от роли.
+        Роль может быть 'client', 'admin', 'employee' и т.д.
+        """
+        if role == "client":
+            QMessageBox.information(self, "Информация", "Открывается окно клиента.")
+            # Здесь можно открыть окно для клиента
+        elif role == "admin":
+            QMessageBox.information(self, "Информация", "Открывается окно администратора.")
+            # Здесь можно открыть окно для администратора
+        elif role == "employee":
+            QMessageBox.information(self, "Информация", "Открывается окно сотрудника.")
+            # Здесь можно открыть окно для сотрудника
+        else:
+            QMessageBox.warning(self, "Ошибка", f"Неизвестная роль: {role}")
 
     def registration(self):
         self.hide()  # Скрываем окно авторизации
