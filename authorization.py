@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 
@@ -114,10 +115,41 @@ class RegisterWindow(QWidget):
 
         # Здесь можно добавить код для регистрации в базу данных (например, SQLite)
         # Для простоты предполагаем, что регистрация прошла успешно:
-        QMessageBox.information(self, "Успех", "Регистрация прошла успешно!")
-        self.close()  # Закрываем окно регистрации
-        if self.parent:
-            self.parent.show()  # Отображаем окно авторизации
+        if not all([firstname, lastname, phone, email, username, password]):
+            QMessageBox.warning(self, "Ошибка", "Заполните все поля!")
+            return
+
+            # Подключение к базе данных
+        try:
+            conn = sqlite3.connect("restoran.db")  # Замените на путь к вашей базе данных
+            cursor = conn.cursor()
+
+            # Проверяем, нет ли уже такого логина или email
+            cursor.execute("SELECT * FROM Customers WHERE Login = ? OR Email = ?", (username, email))
+            if cursor.fetchone():
+                QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином или email уже существует!")
+                return
+
+            # Вставка нового пользователя
+            cursor.execute("""
+                    INSERT INTO Customers (First_name, Last_name, Phone_num, Email, Login, Password)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (firstname, lastname, phone, email, username, password))
+
+            # Фиксируем изменения
+            conn.commit()
+            QMessageBox.information(self, "Успех", "Регистрация прошла успешно!")
+
+            # Закрываем окно регистрации
+            self.close()
+            if self.parent:
+                self.parent.show()
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка работы с базой данных: {e}")
+        finally:
+            if conn:
+                conn.close()
 
     def go_back(self):
         self.close()  # Закрыть окно регистрации
