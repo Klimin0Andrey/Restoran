@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog, QTableWidget, QTableWidgetItem, QTextEdit,QApplication
+    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog,QDateEdit, QTableWidget, QTableWidgetItem, QTextEdit,QApplication
 )
 from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QDate
 import sqlite3
 import sys
 
@@ -52,18 +53,24 @@ class WindowForClient(QMainWindow):
 
     def book_table_result(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle('Бронирование столика')
+        dialog.setWindowTitle('Просмотр свободных столиков')
 
         layout = QVBoxLayout(dialog)
 
-        info_label = QLabel("Свободные столики:")
+        info_label = QLabel("Выберите дату для просмотра свободных столиков:")
         layout.addWidget(info_label)
+
+        # Добавляем QDateEdit для выбора даты
+        date_edit = QDateEdit()
+        date_edit.setCalendarPopup(True)
+        date_edit.setDate(QDate.currentDate())
+        layout.addWidget(date_edit)
 
         table_widget = QTableWidget()
         layout.addWidget(table_widget)
 
         check_button = QPushButton('Показать свободные столики')
-        check_button.clicked.connect(lambda: self.display_available_tables(table_widget))
+        check_button.clicked.connect(lambda: self.display_available_tables(date_edit.date(), table_widget))
         layout.addWidget(check_button)
 
         close_button = QPushButton('Закрыть')
@@ -73,21 +80,25 @@ class WindowForClient(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec()
 
-    def display_available_tables(self, table_widget):
+    def display_available_tables(self, selected_date, table_widget):
         try:
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
 
+            # Преобразуем дату в строку формата 'YYYY-MM-DD'
+            date_str = selected_date.toString("yyyy-MM-dd")
+
+            # Запрос для поиска свободных столов на указанную дату
             query = """
-                SELECT Table_num, Capacity
-                FROM Tables
-                WHERE Table_ID NOT IN (
-                    SELECT Table_ID
-                    FROM Reservations
-                    WHERE strftime('%Y-%m-%d', Date) = Date('now')
+                SELECT t.Table_num, t.Capacity
+                FROM Tables t
+                WHERE t.Table_ID NOT IN (
+                    SELECT r.Table_ID
+                    FROM Reservations r
+                    WHERE strftime('%Y-%m-%d', r.Date) = ?
                 );
             """
-            cursor.execute(query)
+            cursor.execute(query, (date_str,))
             available_tables = cursor.fetchall()
 
             # Устанавливаем количество строк и столбцов в QTableWidget
@@ -101,7 +112,7 @@ class WindowForClient(QMainWindow):
                 table_widget.setItem(row_index, 1, QTableWidgetItem(str(table[1])))
 
             if not available_tables:
-                QMessageBox.information(table_widget, "Информация", "На сегодня свободных столиков нет.")
+                QMessageBox.information(table_widget, "Информация", f"На дату {date_str} свободных столиков нет.")
         except sqlite3.Error as e:
             QMessageBox.critical(table_widget, "Ошибка базы данных", f"Ошибка: {e}")
             print(f"SQLite Error: {e}")
