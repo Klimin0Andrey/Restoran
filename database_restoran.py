@@ -122,9 +122,12 @@ tables_info = [
     (10, 8)]
 
 employees_info = [('', '', '', '', 'admin', 'admin', 'admin'),
-                  ('Иван', 'Полетаев', '+79160450940', 'poletaev@mail.com', 'wpny', '12345', 'employee'),
-                  ('Анна', 'Иванова', '+79160451234', 'ivanova@mail.com', 'anna123', 'qwerty', 'employee'),
-                  ('Дмитрий', 'Кузнецов', '+79160451456', 'kuznetsov@mail.com', 'dima_k', 'abcde', 'employee')]
+                  ('Иван', 'Смирнов', '+7 922 456 7890', 'ivan.smirnov@mail.com', 'ivan_smirnov', '12345', 'employee'),
+                  ('Анна', 'Воронцова', '+7 942 678 9012', 'voroncova@mail.com', 'anna', 'qwerty', 'employee'),
+                  ('Екатерина', 'Каткова', '+7 932 567 8901', 'katerina.katkova@mail.com', 'katerina_katkova', 'Kat0k#2001', 'employee'),
+                  ('Максим', 'Соколов', '+7 952 789 0123', 'maxim.sokolov@mail.com', 'maxim_sokolov', 'Sok0lMax!2024', 'employee'),
+                  ('Ольга', 'Новикова', '+7 962 890 1234', 'olga.novikova@mail.com', 'olga_novikova', 'Nov1kOlg@2000', 'employee'),
+                  ('Дмитрий', 'Кузнецов', '+7 916 045 1456', 'kuznetsov@mail.com', 'dima_k', 'abcde', 'employee')]
 
 menu_items = [
     # Закуски и легкие блюда

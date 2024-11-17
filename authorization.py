@@ -3,8 +3,9 @@ import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 
 
-# from user1_window import WindowForUser1
-# from user2_window import WindowForUser1
+from client_window import WindowForClient
+from admin_window import WindowForAdmin
+from employee_window import WindowForEmployee
 
 
 class PasswordWindow(QWidget):
@@ -84,21 +85,21 @@ class PasswordWindow(QWidget):
                 conn.close()
 
     def open_user_window(self, role):
-        """
-        Метод для открытия окна пользователя в зависимости от роли.
-        Роль может быть 'client', 'admin', 'employee' и т.д.
-        """
+        self.close()  # Закрываем окно авторизации
+
+        # Храним ссылку на новое окно в атрибуте self
         if role == "client":
-            QMessageBox.information(self, "Информация", "Открывается окно клиента.")
-            # Здесь можно открыть окно для клиента
+            self.user_window = WindowForClient()
         elif role == "admin":
-            QMessageBox.information(self, "Информация", "Открывается окно администратора.")
-            # Здесь можно открыть окно для администратора
+            self.user_window = WindowForAdmin()
         elif role == "employee":
-            QMessageBox.information(self, "Информация", "Открывается окно сотрудника.")
-            # Здесь можно открыть окно для сотрудника
+            self.user_window = WindowForEmployee()
         else:
             QMessageBox.warning(self, "Ошибка", f"Неизвестная роль: {role}")
+            self.show()  # Снова показать окно авторизации, если роль не распознана
+            return
+
+        self.user_window.show()
 
     def registration(self):
         self.hide()  # Скрываем окно авторизации
