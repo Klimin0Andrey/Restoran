@@ -9,8 +9,9 @@ import sys
 
 
 class WindowForClient(QMainWindow):
-    def __init__(self):
+    def __init__(self, user_id):
         super().__init__()
+        self.user_id = user_id  # Сохраняем текущего пользователя
         self.current_order = []
         self.setWindowTitle("Окно клиента")
         self.setGeometry(100, 100, 800, 600)
@@ -22,7 +23,7 @@ class WindowForClient(QMainWindow):
 
         self.result_table = QTableWidget()
         self.result_table.setColumnCount(4)
-        self.result_table.setHorizontalHeaderLabels(["Количество", "Название", "Цена", "Итого"])
+        self.result_table.setHorizontalHeaderLabels(["Количество", "Название", "Цена за единицу", "Итого"])
         layout.addWidget(self.result_table)
 
         book_table_button = QPushButton('Забронировать столик')
@@ -164,7 +165,7 @@ class WindowForClient(QMainWindow):
             cursor.execute("""
                 INSERT INTO Reservations (Customer_ID, Table_ID, Date, Amount_people)
                 VALUES (?, ?, ?, ?)
-            """, (1, table_id, date_str, num_people))  # Здесь "1" - это ID клиента, вы можете его получить из сессии
+            """, (self.user_id, table_id, date_str, num_people))
 
             connection.commit()
             QMessageBox.information(self, "Успех", f"Столик №{table_id} успешно забронирован на {date_str}.")
@@ -293,7 +294,8 @@ class WindowForClient(QMainWindow):
             cursor.execute("""
                 INSERT INTO Orders (Customer_ID, Employee_ID, Order_date, Total_Amount, Order_status)
                 VALUES (?, ?, datetime('now'), ?, 'Pending')
-            """, (1, None, sum(item['Price'] * item['Quantity'] for item in self.current_order)))
+            """, (self.user_id, None, sum(item['Price'] * item['Quantity'] for item in self.current_order)))
+
             order_id = cursor.lastrowid
 
             # Вставляем позиции заказа в таблицу OrderItems
@@ -320,12 +322,10 @@ class WindowForClient(QMainWindow):
                 connection.close()
 
     def show_shopping_cart(self):
+        """Показывает текущую корзину для авторизованного пользователя."""
         try:
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
-
-            # Замените на реальный ID текущего клиента
-            current_customer_id = 1
 
             # Получение последнего заказа текущего клиента со статусом "Pending"
             cursor.execute("""
@@ -333,12 +333,12 @@ class WindowForClient(QMainWindow):
                 FROM Orders
                 WHERE Customer_ID = ? AND Order_status = 'Pending'
                 ORDER BY Order_date DESC LIMIT 1
-            """, (current_customer_id,))
+            """, (self.user_id,))
             order = cursor.fetchone()
 
             if not order:
                 QMessageBox.information(self, "Корзина пуста", "На данный момент в корзине ничего нет.")
-                self.result_table.setRowCount(0)
+                self.result_table.setRowCount(0)  # Очистка таблицы
                 return
 
             order_id, total_amount, order_date = order
@@ -352,7 +352,7 @@ class WindowForClient(QMainWindow):
             """, (order_id,))
             order_items = cursor.fetchall()
 
-            # Заполняем таблицу
+            # Заполнение таблицы
             self.result_table.setRowCount(len(order_items))
             for row_index, (quantity, name, price, total_price) in enumerate(order_items):
                 self.result_table.setItem(row_index, 0, QTableWidgetItem(str(quantity)))
@@ -360,12 +360,87 @@ class WindowForClient(QMainWindow):
                 self.result_table.setItem(row_index, 2, QTableWidgetItem(f"{price:.2f}"))
                 self.result_table.setItem(row_index, 3, QTableWidgetItem(f"{total_price:.2f}"))
 
-            # Добавляем строку с общей суммой заказа
-            self.result_table.setRowCount(len(order_items) + 1)
-            self.result_table.setItem(len(order_items), 0, QTableWidgetItem("Общая сумма:"))
-            self.result_table.setItem(len(order_items), 1, QTableWidgetItem(""))
-            self.result_table.setItem(len(order_items), 2, QTableWidgetItem(""))
-            self.result_table.setItem(len(order_items), 3, QTableWidgetItem(f"{total_amount:.2f}"))
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def edit_shop_crt(self):
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Замените на реальный ID текущего клиента
+            current_customer_id = self.user_id
+
+            # Получение последнего заказа текущего клиента со статусом "Pending"
+            cursor.execute("""
+                SELECT Order_ID
+                FROM Orders
+                WHERE Customer_ID = ? AND Order_status = 'Pending'
+                ORDER BY Order_date DESC LIMIT 1
+            """, (self.user_id,))
+            order = cursor.fetchone()
+
+            if not order:
+                QMessageBox.information(self, "Корзина пуста", "На данный момент в корзине ничего нет.")
+                return
+
+            order_id = order[0]
+
+            # Получение позиций заказа
+            cursor.execute("""
+                SELECT oi.OrderItem_ID, mi.Name, oi.Quantity, oi.Price
+                FROM OrderItems oi
+                JOIN MenuItems mi ON oi.MenuItem_ID = mi.MenuItem_ID
+                WHERE oi.Order_ID = ?
+            """, (order_id,))
+            order_items = cursor.fetchall()
+
+            if not order_items:
+                QMessageBox.information(self, "Корзина пуста", "На данный момент в корзине ничего нет.")
+                return
+
+            # Создаем диалог для редактирования
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Редактировать корзину")
+            layout = QVBoxLayout(dialog)
+
+            # Таблица для отображения корзины
+            cart_table = QTableWidget()
+            cart_table.setColumnCount(4)
+            cart_table.setHorizontalHeaderLabels(["ID позиции", "Название", "Количество", "Цена за единицу"])
+            cart_table.setRowCount(len(order_items))
+
+            # Заполняем таблицу
+            for row_index, (item_id, name, qty, price) in enumerate(order_items):
+                cart_table.setItem(row_index, 0, QTableWidgetItem(str(item_id)))
+                cart_table.setItem(row_index, 1, QTableWidgetItem(name))
+                cart_table.setItem(row_index, 2, QTableWidgetItem(str(qty)))
+                cart_table.setItem(row_index, 3, QTableWidgetItem(f"{price:.2f}"))
+
+            layout.addWidget(cart_table)
+
+            # Кнопка для удаления позиции
+            remove_button = QPushButton("Удалить позицию")
+            remove_button.clicked.connect(lambda: self.remove_cart_item(cart_table, order_id))
+            layout.addWidget(remove_button)
+
+            # Кнопка для сохранения изменений
+            save_button = QPushButton("Сохранить изменения")
+            save_button.clicked.connect(lambda: self.save_cart_changes(cart_table, order_id))
+            layout.addWidget(save_button)
+
+            # Кнопка для закрытия
+            close_button = QPushButton("Закрыть")
+            close_button.clicked.connect(dialog.close)
+            layout.addWidget(close_button)
+
+            dialog.setLayout(layout)
+            dialog.exec()
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -377,5 +452,103 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
-    def edit_shop_crt(self):
-        pass
+    def remove_cart_item(self, cart_table, order_id):
+        try:
+            selected_row = cart_table.currentRow()
+            if selected_row == -1:
+                QMessageBox.warning(self, "Ошибка", "Выберите позицию для удаления.")
+                return
+
+            item_id = int(cart_table.item(selected_row, 0).text())
+
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            cursor.execute("DELETE FROM OrderItems WHERE OrderItem_ID = ?", (item_id,))
+            connection.commit()
+
+            QMessageBox.information(self, "Успех", "Позиция удалена.")
+            self.update_cart_table(cart_table, order_id)
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def save_cart_changes(self, cart_table, order_id):
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            for row in range(cart_table.rowCount()):
+                item_id = int(cart_table.item(row, 0).text())
+                new_qty = int(cart_table.item(row, 2).text())
+
+                if new_qty <= 0:
+                    QMessageBox.warning(self, "Ошибка", "Количество должно быть больше нуля.")
+                    return
+
+                cursor.execute("""
+                    UPDATE OrderItems
+                    SET Quantity = ?
+                    WHERE OrderItem_ID = ?
+                """, (new_qty, item_id))
+
+            connection.commit()
+            QMessageBox.information(self, "Успех", "Изменения сохранены.")
+            self.show_shopping_cart()  # Обновляем отображение корзины
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def update_cart_table(self, cart_table, order_id):
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Загружаем данные корзины из базы данных
+            cursor.execute("""
+                SELECT oi.OrderItem_ID, mi.Name, oi.Quantity, oi.Price
+                FROM OrderItems oi
+                JOIN MenuItems mi ON oi.MenuItem_ID = mi.MenuItem_ID
+                WHERE oi.Order_ID = ?
+            """, (order_id,))
+            order_items = cursor.fetchall()
+
+            # Очищаем таблицу
+            cart_table.clearContents()
+
+            if not order_items:  # Если корзина пуста
+                QMessageBox.information(self, "Корзина пуста", "Все позиции удалены.")
+                cart_table.setRowCount(0)
+                return
+
+            # Обновляем содержимое таблицы
+            cart_table.setRowCount(len(order_items))
+            for row_index, (item_id, name, qty, price) in enumerate(order_items):
+                cart_table.setItem(row_index, 0, QTableWidgetItem(str(item_id)))
+                cart_table.setItem(row_index, 1, QTableWidgetItem(name))
+                cart_table.setItem(row_index, 2, QTableWidgetItem(str(qty)))
+                cart_table.setItem(row_index, 3, QTableWidgetItem(f"{price:.2f}"))
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()

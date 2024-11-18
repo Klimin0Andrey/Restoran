@@ -2,7 +2,6 @@ import sqlite3
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 
-
 from client_window import WindowForClient
 from admin_window import WindowForAdmin
 from employee_window import WindowForEmployee
@@ -54,26 +53,26 @@ class PasswordWindow(QWidget):
 
             # Проверяем пользователя среди клиентов
             cursor.execute("""
-                SELECT Role FROM Customers WHERE Login = ? AND Password = ?
+                SELECT Customer_ID, Role FROM Customers WHERE Login = ? AND Password = ?
             """, (username, password))
             customer = cursor.fetchone()
 
             if customer:
-                role = customer[0]
+                user_id, role = customer
                 QMessageBox.information(self, "Успех", f"Добро пожаловать, {role}!")
-                self.open_user_window(role)
+                self.open_user_window(role, user_id)
                 return
 
             # Проверяем пользователя среди сотрудников
             cursor.execute("""
-                SELECT Role FROM Employees WHERE Login = ? AND Password = ?
+                SELECT Employee_ID, Role FROM Employees WHERE Login = ? AND Password = ?
             """, (username, password))
             employee = cursor.fetchone()
 
             if employee:
-                role = employee[0]
+                user_id, role = employee
                 QMessageBox.information(self, "Успех", f"Добро пожаловать, {role}!")
-                self.open_user_window(role)
+                self.open_user_window(role, user_id)
                 return
 
             # Если пользователь не найден
@@ -84,16 +83,16 @@ class PasswordWindow(QWidget):
             if conn:
                 conn.close()
 
-    def open_user_window(self, role):
+    def open_user_window(self, role, user_id):
         self.close()  # Закрываем окно авторизации
 
         # Храним ссылку на новое окно в атрибуте self
         if role == "client":
-            self.user_window = WindowForClient()
+            self.user_window = WindowForClient(user_id)  # Передаем user_id
         elif role == "admin":
-            self.user_window = WindowForAdmin()
+            self.user_window = WindowForAdmin(user_id)  # Для примера, если нужно
         elif role == "employee":
-            self.user_window = WindowForEmployee()
+            self.user_window = WindowForEmployee(user_id)  # Для примера, если нужно
         else:
             QMessageBox.warning(self, "Ошибка", f"Неизвестная роль: {role}")
             self.show()  # Снова показать окно авторизации, если роль не распознана
