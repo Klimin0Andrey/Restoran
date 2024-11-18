@@ -10,6 +10,7 @@ import sys
 class WindowForClient(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.current_order = []
         self.setWindowTitle("Окно клиента")
         self.setGeometry(100, 100, 800, 600)
 
@@ -165,4 +166,146 @@ class WindowForClient(QMainWindow):
                 connection.close()
 
     def order_maker(self):
-        pass
+        dialog = QDialog(self)
+        dialog.setWindowTitle('Сделать заказ')
+
+        layout = QVBoxLayout(dialog)
+        info_label = QLabel("Просмотр меню ресторана:")
+        layout.addWidget(info_label)
+
+        menu_table = QTableWidget()
+        layout.addWidget(menu_table)
+
+        category_button = QPushButton("Выбрать категорию")
+        category_button.clicked.connect(lambda: self.display_menu_by_category(menu_table))
+        layout.addWidget(category_button)
+
+        add_button = QPushButton("Добавить в заказ")
+        add_button.clicked.connect(lambda: self.add_menu_item_to_order(menu_table))
+        layout.addWidget(add_button)
+
+        complete_button = QPushButton("Завершить заказ")
+        complete_button.clicked.connect(lambda: self.complete_order(dialog))
+        layout.addWidget(complete_button)
+
+        close_button = QPushButton("Закрыть")
+        close_button.clicked.connect(dialog.close)
+        layout.addWidget(close_button)
+
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    def display_menu_by_category(self, menu_table):
+        try:
+            # Подключаемся к базе данных
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Запрашиваем доступные категории
+            cursor.execute("SELECT DISTINCT Category FROM MenuItems")
+            categories = [row[0] for row in cursor.fetchall()]
+
+            if not categories:
+                QMessageBox.information(self, "Информация", "В меню нет доступных категорий.")
+                return
+
+            # Диалог для выбора категории
+            category, ok = QInputDialog.getItem(self, "Выбор категории", "Выберите категорию:", categories,
+                                                editable=False)
+            if not ok:
+                return
+
+            # Запрашиваем блюда выбранной категории
+            query = "SELECT MenuItem_ID, Name, Description, Price FROM MenuItems WHERE Category = ?"
+            cursor.execute(query, (category,))
+            menu_items = cursor.fetchall()
+
+            # Настраиваем таблицу
+            menu_table.setRowCount(len(menu_items))
+            menu_table.setColumnCount(4)
+            menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена"])
+
+            for row_index, item in enumerate(menu_items):
+                for col_index, value in enumerate(item):
+                    menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def add_menu_item_to_order(self, menu_table):
+        try:
+            selected_row = menu_table.currentRow()
+            if selected_row == -1:
+                QMessageBox.warning(self, "Ошибка", "Пожалуйста, выберите блюдо для добавления в заказ.")
+                return
+
+            menu_item_id = int(menu_table.item(selected_row, 0).text())
+            menu_item_name = menu_table.item(selected_row, 1).text()
+            menu_item_price = float(menu_table.item(selected_row, 3).text())
+
+            quantity, ok = QInputDialog.getInt(self, "Количество", f"Введите количество для блюда '{menu_item_name}':",
+                                               1, 1)
+            if not ok:
+                return
+
+            # Добавляем в текущий заказ
+            self.current_order.append({
+                "MenuItem_ID": menu_item_id,
+                "Name": menu_item_name,
+                "Quantity": quantity,
+                "Price": menu_item_price
+            })
+
+            QMessageBox.information(self, "Успех", f"Блюдо '{menu_item_name}' (x{quantity}) добавлено в заказ.")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+
+    def complete_order(self, dialog):
+        if not self.current_order:
+            QMessageBox.warning(self, "Ошибка", "Заказ пуст. Добавьте блюда перед завершением.")
+            return
+
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Вставляем новый заказ в таблицу Orders
+            cursor.execute("""
+                INSERT INTO Orders (Customer_ID, Employee_ID, Order_date, Total_Amount, Order_status)
+                VALUES (?, ?, datetime('now'), ?, 'Pending')
+            """, (1, None, sum(item['Price'] * item['Quantity'] for item in self.current_order)))
+            order_id = cursor.lastrowid
+
+            # Вставляем позиции заказа в таблицу OrderItems
+            for item in self.current_order:
+                cursor.execute("""
+                    INSERT INTO OrderItems (Order_ID, MenuItem_ID, Quantity, Price)
+                    VALUES (?, ?, ?, ?)
+                """, (order_id, item['MenuItem_ID'], item['Quantity'], item['Price']))
+
+            connection.commit()
+
+            QMessageBox.information(self, "Успех", "Заказ успешно сохранен!")
+            self.current_order = []  # Очищаем временный заказ
+            dialog.close()
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+
+
