@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog, QDateEdit, QTableWidget, QTableWidgetItem, QTextEdit, QApplication, QInputDialog
+    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog, QDateEdit, QTableWidget,
+    QTableWidgetItem, QTextEdit, QApplication, QInputDialog
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QDate
@@ -19,8 +20,10 @@ class WindowForClient(QMainWindow):
 
         layout = QVBoxLayout()
 
-        self.result_text_edit = QTextEdit()
-        layout.addWidget(self.result_text_edit)
+        self.result_table = QTableWidget()
+        self.result_table.setColumnCount(4)
+        self.result_table.setHorizontalHeaderLabels(["Количество", "Название", "Цена", "Итого"])
+        layout.addWidget(self.result_table)
 
         book_table_button = QPushButton('Забронировать столик')
         book_table_button.clicked.connect(self.book_table_result)
@@ -29,6 +32,14 @@ class WindowForClient(QMainWindow):
         make_order = QPushButton('Сделать заказ')
         make_order.clicked.connect(self.order_maker)
         layout.addWidget(make_order)
+
+        shopping_cart = QPushButton('Моя корзина')
+        shopping_cart.clicked.connect(self.show_shopping_cart)
+        layout.addWidget(shopping_cart)
+
+        edit_shopping_cart = QPushButton('Редактировать корзину')
+        edit_shopping_cart.clicked.connect(self.edit_shop_crt)
+        layout.addWidget(edit_shopping_cart)
 
         central_widget.setLayout(layout)
 
@@ -72,7 +83,8 @@ class WindowForClient(QMainWindow):
 
         check_button = QPushButton('Показать свободные столики')
         book_table = QPushButton('Забронировать столик')
-        book_table.clicked.connect(lambda: self.get_table_reservation(date_edit.date(), table_widget))  # Передаем дату и таблицу
+        book_table.clicked.connect(
+            lambda: self.get_table_reservation(date_edit.date(), table_widget))  # Передаем дату и таблицу
         check_button.clicked.connect(lambda: self.display_available_tables(date_edit.date(), table_widget))
         layout.addWidget(check_button)
         layout.addWidget(book_table)
@@ -307,5 +319,63 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    def show_shopping_cart(self):
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
 
+            # Замените на реальный ID текущего клиента
+            current_customer_id = 1
 
+            # Получение последнего заказа текущего клиента со статусом "Pending"
+            cursor.execute("""
+                SELECT Order_ID, Total_Amount, Order_date 
+                FROM Orders
+                WHERE Customer_ID = ? AND Order_status = 'Pending'
+                ORDER BY Order_date DESC LIMIT 1
+            """, (current_customer_id,))
+            order = cursor.fetchone()
+
+            if not order:
+                QMessageBox.information(self, "Корзина пуста", "На данный момент в корзине ничего нет.")
+                self.result_table.setRowCount(0)
+                return
+
+            order_id, total_amount, order_date = order
+
+            # Получение позиций заказа
+            cursor.execute("""
+                SELECT oi.Quantity, mi.Name, oi.Price, (oi.Quantity * oi.Price) as TotalPrice
+                FROM OrderItems oi
+                JOIN MenuItems mi ON oi.MenuItem_ID = mi.MenuItem_ID
+                WHERE oi.Order_ID = ?
+            """, (order_id,))
+            order_items = cursor.fetchall()
+
+            # Заполняем таблицу
+            self.result_table.setRowCount(len(order_items))
+            for row_index, (quantity, name, price, total_price) in enumerate(order_items):
+                self.result_table.setItem(row_index, 0, QTableWidgetItem(str(quantity)))
+                self.result_table.setItem(row_index, 1, QTableWidgetItem(name))
+                self.result_table.setItem(row_index, 2, QTableWidgetItem(f"{price:.2f}"))
+                self.result_table.setItem(row_index, 3, QTableWidgetItem(f"{total_price:.2f}"))
+
+            # Добавляем строку с общей суммой заказа
+            self.result_table.setRowCount(len(order_items) + 1)
+            self.result_table.setItem(len(order_items), 0, QTableWidgetItem("Общая сумма:"))
+            self.result_table.setItem(len(order_items), 1, QTableWidgetItem(""))
+            self.result_table.setItem(len(order_items), 2, QTableWidgetItem(""))
+            self.result_table.setItem(len(order_items), 3, QTableWidgetItem(f"{total_amount:.2f}"))
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def edit_shop_crt(self):
+        pass
