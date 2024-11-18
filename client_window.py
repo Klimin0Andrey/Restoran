@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog,QDateEdit, QTableWidget, QTableWidgetItem, QTextEdit,QApplication
+    QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog, QDateEdit, QTableWidget, QTableWidgetItem, QTextEdit, QApplication, QInputDialog
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QDate
@@ -70,8 +70,11 @@ class WindowForClient(QMainWindow):
         layout.addWidget(table_widget)
 
         check_button = QPushButton('Показать свободные столики')
+        book_table = QPushButton('Забронировать столик')
+        book_table.clicked.connect(lambda: self.get_table_reservation(date_edit.date(), table_widget))  # Передаем дату и таблицу
         check_button.clicked.connect(lambda: self.display_available_tables(date_edit.date(), table_widget))
         layout.addWidget(check_button)
+        layout.addWidget(book_table)
 
         close_button = QPushButton('Закрыть')
         close_button.clicked.connect(dialog.close)
@@ -90,7 +93,7 @@ class WindowForClient(QMainWindow):
 
             # Запрос для поиска свободных столов на указанную дату
             query = """
-                SELECT t.Table_num, t.Capacity
+                SELECT t.Table_num, t.Capacity, t.Table_ID
                 FROM Tables t
                 WHERE t.Table_ID NOT IN (
                     SELECT r.Table_ID
@@ -103,13 +106,14 @@ class WindowForClient(QMainWindow):
 
             # Устанавливаем количество строк и столбцов в QTableWidget
             table_widget.setRowCount(len(available_tables))
-            table_widget.setColumnCount(2)
-            table_widget.setHorizontalHeaderLabels(["Номер стола", "Вместимость"])
+            table_widget.setColumnCount(3)
+            table_widget.setHorizontalHeaderLabels(["Номер стола", "Вместимость", "ID стола"])
 
             # Заполняем таблицу данными
             for row_index, table in enumerate(available_tables):
                 table_widget.setItem(row_index, 0, QTableWidgetItem(str(table[0])))
                 table_widget.setItem(row_index, 1, QTableWidgetItem(str(table[1])))
+                table_widget.setItem(row_index, 2, QTableWidgetItem(str(table[2])))
 
             if not available_tables:
                 QMessageBox.information(table_widget, "Информация", f"На дату {date_str} свободных столиков нет.")
@@ -119,6 +123,43 @@ class WindowForClient(QMainWindow):
         except Exception as e:
             QMessageBox.critical(table_widget, "Ошибка", f"Произошла ошибка: {e}")
             print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def get_table_reservation(self, selected_date, table_widget):
+        try:
+            selected_row = table_widget.currentRow()
+            if selected_row == -1:
+                QMessageBox.warning(self, "Ошибка", "Пожалуйста, выберите столик для бронирования.")
+                return
+
+            table_id = table_widget.item(selected_row, 2).text()  # Используем ID стола
+            date_str = selected_date.toString("yyyy-MM-dd")
+
+            # Подключаемся к базе данных
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Запрашиваем количество людей (можно добавить отдельный ввод)
+            num_people, ok = QInputDialog.getInt(self, "Количество людей", "Введите количество людей:")
+            if not ok or num_people <= 0:
+                QMessageBox.warning(self, "Ошибка", "Введите корректное количество людей.")
+                return
+
+            # Вставляем запись о бронировании
+            cursor.execute("""
+                INSERT INTO Reservations (Customer_ID, Table_ID, Date, Amount_people)
+                VALUES (?, ?, ?, ?)
+            """, (1, table_id, date_str, num_people))  # Здесь "1" - это ID клиента, вы можете его получить из сессии
+
+            connection.commit()
+            QMessageBox.information(self, "Успех", f"Столик №{table_id} успешно забронирован на {date_str}.")
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
         finally:
             if connection:
                 connection.close()
