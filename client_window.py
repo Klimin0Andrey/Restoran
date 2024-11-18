@@ -42,6 +42,10 @@ class WindowForClient(QMainWindow):
         edit_shopping_cart.clicked.connect(self.edit_shop_crt)
         layout.addWidget(edit_shopping_cart)
 
+        bill = QPushButton('Счёт заказа')
+        bill.clicked.connect(self.bill_info)
+        layout.addWidget(bill)
+
         central_widget.setLayout(layout)
 
         menubar = self.menuBar()  # Меню-бар
@@ -459,16 +463,34 @@ class WindowForClient(QMainWindow):
                 QMessageBox.warning(self, "Ошибка", "Выберите позицию для удаления.")
                 return
 
+            # Получаем ID позиции для удаления
             item_id = int(cart_table.item(selected_row, 0).text())
 
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
 
+            # Удаляем выбранную позицию
             cursor.execute("DELETE FROM OrderItems WHERE OrderItem_ID = ?", (item_id,))
+
+            # Пересчитываем общую стоимость заказа
+            cursor.execute("""
+                SELECT SUM(Quantity * Price) AS TotalAmount
+                FROM OrderItems
+                WHERE Order_ID = ?
+            """, (order_id,))
+            new_total = cursor.fetchone()[0] or 0  # Если нет оставшихся блюд, устанавливаем 0
+
+            # Обновляем общую стоимость заказа в таблице Orders
+            cursor.execute("""
+                UPDATE Orders
+                SET Total_Amount = ?
+                WHERE Order_ID = ?
+            """, (new_total, order_id))
+
             connection.commit()
 
             QMessageBox.information(self, "Успех", "Позиция удалена.")
-            self.update_cart_table(cart_table, order_id)
+            self.update_cart_table(cart_table, order_id)  # Обновляем таблицу корзины
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -552,3 +574,112 @@ class WindowForClient(QMainWindow):
         finally:
             if connection:
                 connection.close()
+
+    def bill_info(self):
+        """Показывает и обновляет счёт текущего заказа для авторизованного клиента."""
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Получаем информацию о клиенте
+            cursor.execute("""
+                SELECT First_name, Last_name
+                FROM Customers
+                WHERE Customer_ID = ?
+            """, (self.user_id,))
+            customer = cursor.fetchone()
+
+            if not customer:
+                QMessageBox.warning(self, "Ошибка", "Информация о клиенте не найдена.")
+                return
+
+            first_name, last_name = customer
+
+            # Получаем текущий заказ
+            cursor.execute("""
+                SELECT Order_ID, Total_Amount
+                FROM Orders
+                WHERE Customer_ID = ? AND Order_status = 'Pending'
+                ORDER BY Order_date DESC LIMIT 1
+            """, (self.user_id,))
+            order = cursor.fetchone()
+
+            if not order:
+                QMessageBox.information(self, "Счёт заказа", "У вас нет активного заказа.")
+                return
+
+            order_id, total_amount = order
+
+            # Проверяем блюда заказа
+            cursor.execute("""
+                SELECT oi.OrderItem_ID, oi.Quantity, oi.Price, (oi.Quantity * oi.Price) as TotalPrice
+                FROM OrderItems oi
+                WHERE oi.Order_ID = ?
+            """, (order_id,))
+            order_items = cursor.fetchall()
+
+            # Если блюда в заказе отсутствуют, обновляем общую стоимость в базе данных
+            if not order_items:
+                total_amount = 0
+                cursor.execute("""
+                    UPDATE Orders
+                    SET Total_Amount = ?
+                    WHERE Order_ID = ?
+                """, (total_amount, order_id))
+                connection.commit()
+
+            # Получаем информацию о забронированных столах
+            cursor.execute("""
+                SELECT t.Table_num, t.Capacity, r.Date
+                FROM Reservations r
+                JOIN Tables t ON r.Table_ID = t.Table_ID
+                WHERE r.Customer_ID = ? AND strftime('%Y-%m-%d', r.Date) = strftime('%Y-%m-%d', datetime('now'))
+            """, (self.user_id,))
+            reservations = cursor.fetchall()
+
+            # Формируем текст для отображения
+            bill_text = f"Клиент: {last_name} {first_name}\n\n"
+
+            if order_items:
+                bill_text += "Блюда заказа:\n"
+                for item_id, quantity, price, total in order_items:
+                    bill_text += f" - ID: {item_id}, Количество: {quantity}, Цена: {price:.2f} руб., Итого: {total:.2f} руб.\n"
+            else:
+                bill_text += "Блюда заказа отсутствуют.\n"
+
+            bill_text += f"\nОбщая стоимость: {total_amount:.2f} руб.\n\n"
+
+            if reservations:
+                bill_text += "Забронированные столы:\n"
+                for table_num, capacity, date in reservations:
+                    bill_text += f" - Стол №{table_num}, Вместимость: {capacity}, Дата: {date}\n"
+            else:
+                bill_text += "Забронированных столов нет.\n"
+
+            # Отображаем текст в диалоговом окне
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Счёт заказа")
+
+            layout = QVBoxLayout(dialog)
+            text_edit = QTextEdit()
+            text_edit.setReadOnly(True)
+            text_edit.setText(bill_text)
+            layout.addWidget(text_edit)
+
+            close_button = QPushButton("Закрыть")
+            close_button.clicked.connect(dialog.close)
+            layout.addWidget(close_button)
+
+            dialog.setLayout(layout)
+            dialog.exec()
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+            print(f"SQLite Error: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+            print(f"General Error: {e}")
+        finally:
+            if connection:
+                connection.close()
+
