@@ -90,7 +90,7 @@ class PasswordWindow(QWidget):
         if role == "client":
             self.user_window = WindowForClient(user_id)  # Передаем user_id
         elif role == "admin":
-            self.user_window = WindowForAdmin(user_id)  # Для примера, если нужно
+            self.user_window = WindowForAdmin()  # Для примера, если нужно
         elif role == "employee":
             self.user_window = WindowForEmployee(user_id)  # Для примера, если нужно
         else:

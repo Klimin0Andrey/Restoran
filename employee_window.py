@@ -1,13 +1,15 @@
 import sqlite3
 from PyQt6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget, QTextEdit
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMainWindow, QMenuBar, QMessageBox, QApplication, QDialog,QPushButton, QTableWidget, QTableWidgetItem, QInputDialog
+from PyQt6.QtWidgets import QMainWindow, QMenuBar, QMessageBox, QApplication, QDialog, QPushButton, QTableWidget, \
+    QTableWidgetItem, QInputDialog
 import sys
 
 
 class WindowForEmployee(QMainWindow):
-    def __init__(self):
+    def __init__(self, employee_id):
         super().__init__()
+        self.employee_id = employee_id
         self.setWindowTitle("Окно сотрудника")
         self.setGeometry(100, 100, 800, 600)
 
@@ -126,9 +128,96 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
-
     def accept_user_order(self):
-        pass
+        try:
+            # Подключение к базе данных
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Выбор заказов без назначенного сотрудника
+            cursor.execute("""
+                SELECT Order_ID, Customer_ID, Total_Amount, Order_date
+                FROM Orders
+                WHERE Employee_ID IS NULL
+            """)
+            orders = cursor.fetchall()
+
+            if not orders:
+                QMessageBox.information(self, "Нет доступных заказов", "Все заказы уже приняты.")
+                return
+
+            # Создаем диалог для выбора заказа
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Принять заказ")
+            layout = QVBoxLayout(dialog)
+
+            table_widget = QTableWidget()
+            table_widget.setRowCount(len(orders))
+            table_widget.setColumnCount(4)
+            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Дата заказа"])
+            layout.addWidget(table_widget)
+
+            # Заполнение таблицы доступных заказов
+            for row_index, (order_id, customer_id, total_amount, order_date) in enumerate(orders):
+                table_widget.setItem(row_index, 0, QTableWidgetItem(str(order_id)))
+                table_widget.setItem(row_index, 1, QTableWidgetItem(str(customer_id)))
+                table_widget.setItem(row_index, 2, QTableWidgetItem(f"{total_amount:.2f}"))
+                table_widget.setItem(row_index, 3, QTableWidgetItem(order_date))
+
+            accept_button = QPushButton("Принять выбранный заказ")
+            accept_button.clicked.connect(lambda: self.assign_order_to_employee(table_widget, dialog))
+            layout.addWidget(accept_button)
+
+            close_button = QPushButton("Закрыть")
+            close_button.clicked.connect(dialog.close)
+            layout.addWidget(close_button)
+
+            dialog.setLayout(layout)
+            dialog.exec()
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+        finally:
+            if connection:
+                connection.close()
+
+    def assign_order_to_employee(self, table_widget, dialog):
+        try:
+            selected_row = table_widget.currentRow()
+            if selected_row == -1:
+                QMessageBox.warning(self, "Ошибка", "Пожалуйста, выберите заказ для принятия.")
+                return
+
+            # Получаем ID выбранного заказа
+            order_id = int(table_widget.item(selected_row, 0).text())
+
+            # Используем ID текущего авторизованного сотрудника
+            employee_id = self.employee_id
+
+            # Подключение к базе данных
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Назначаем заказ текущему сотруднику
+            cursor.execute("""
+                UPDATE Orders
+                SET Employee_ID = ?
+                WHERE Order_ID = ?
+            """, (employee_id, order_id))
+            connection.commit()
+
+            QMessageBox.information(self, "Успех", f"Заказ {order_id} успешно принят.")
+            dialog.close()
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+        finally:
+            if connection:
+                connection.close()
 
     def change_status(self):
         pass
