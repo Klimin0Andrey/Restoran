@@ -638,10 +638,6 @@ class WindowForAdmin(QMainWindow):
             if connection:
                 connection.close()
 
-    import sqlite3
-    from openpyxl import Workbook
-    from PyQt6.QtWidgets import QFileDialog, QMessageBox
-
     def reports_in_excel(self):
         """Генерация отчётов и аналитики в Excel."""
         try:
