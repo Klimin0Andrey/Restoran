@@ -1,8 +1,9 @@
 import sqlite3
 from PyQt6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget
+from openpyxl import Workbook
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QVBoxLayout, QPushButton, QDialog, QInputDialog, QLineEdit, \
-    QHBoxLayout
+    QHBoxLayout, QFileDialog, QMessageBox
 from PyQt6.QtWidgets import QMainWindow, QMenuBar, QMessageBox, QApplication, QDialog, QPushButton, QTextEdit
 import sys
 
@@ -19,7 +20,7 @@ class WindowForAdmin(QMainWindow):
 
         layout = QVBoxLayout()
 
-        self.result_table = QTableWidget()
+        self.result_table = QTextEdit()
         layout.addWidget(self.result_table)
 
         users = QPushButton('Пользователи')
@@ -575,7 +576,27 @@ class WindowForAdmin(QMainWindow):
     def view_orders(self):
         """Просмотр всех заказов."""
         try:
-            self.load_orders(self.result_table)  # Загружаем данные в таблицу
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Просмотр заказов")
+            dialog.setGeometry(200, 150, 800, 600)
+
+            layout = QVBoxLayout(dialog)
+
+            # Таблица для отображения заказов
+            table = QTableWidget()
+            layout.addWidget(table)
+
+            # Загрузка данных заказов
+            self.load_orders(table)
+
+            # Кнопка закрытия
+            close_button = QPushButton("Закрыть")
+            close_button.clicked.connect(dialog.close)
+            layout.addWidget(close_button)
+
+            dialog.setLayout(layout)
+            dialog.exec()
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
 
@@ -611,13 +632,90 @@ class WindowForAdmin(QMainWindow):
                 for col_index, value in enumerate(order):
                     table.setItem(row_index, col_index, QTableWidgetItem(str(value) if value else "Нет данных"))
 
-            table.resizeColumnsToContents()  # Автоматически подгоняем ширину столбцов
-
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
         finally:
             if connection:
                 connection.close()
 
+    import sqlite3
+    from openpyxl import Workbook
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
     def reports_in_excel(self):
-        pass
+        """Генерация отчётов и аналитики в Excel."""
+        try:
+            connection = sqlite3.connect("restoran.db")
+            cursor = connection.cursor()
+
+            # Создание нового Excel-файла
+            workbook = Workbook()
+
+            # Отчёт 1: Выручка за день
+            sheet_revenue = workbook.active
+            sheet_revenue.title = "Выручка за день"
+
+            query_revenue = """
+                SELECT DATE(Order_date) as OrderDay, SUM(Total_Amount) as Revenue
+                FROM Orders
+                WHERE Order_status = 'Completed'
+                GROUP BY OrderDay
+                ORDER BY OrderDay;
+            """
+            cursor.execute(query_revenue)
+            revenue_data = cursor.fetchall()
+
+            sheet_revenue.append(["Дата", "Выручка"])
+            for row in revenue_data:
+                sheet_revenue.append(row)
+
+            # Отчёт 2: Наиболее продаваемые блюда
+            sheet_top_dishes = workbook.create_sheet(title="Популярные блюда")
+
+            query_top_dishes = """
+                SELECT mi.Name, SUM(oi.Quantity) as TotalSold
+                FROM OrderItems oi
+                JOIN MenuItems mi ON oi.MenuItem_ID = mi.MenuItem_ID
+                GROUP BY mi.Name
+                ORDER BY TotalSold DESC
+                LIMIT 10;
+            """
+            cursor.execute(query_top_dishes)
+            top_dishes_data = cursor.fetchall()
+
+            sheet_top_dishes.append(["Название блюда", "Количество продано"])
+            for row in top_dishes_data:
+                sheet_top_dishes.append(row)
+
+            # Отчёт 3: Средний чек
+            sheet_avg_check = workbook.create_sheet(title="Средний чек")
+
+            query_avg_check = """
+                SELECT DATE(Order_date) as OrderDay, AVG(Total_Amount) as AvgCheck
+                FROM Orders
+                WHERE Order_status = 'Completed'
+                GROUP BY OrderDay
+                ORDER BY OrderDay;
+            """
+            cursor.execute(query_avg_check)
+            avg_check_data = cursor.fetchall()
+
+            sheet_avg_check.append(["Дата", "Средний чек"])
+            for row in avg_check_data:
+                sheet_avg_check.append(row)
+
+            # Сохранение отчёта
+            file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить отчёт", "", "Excel Files (*.xlsx)")
+            if file_path:
+                workbook.save(file_path)
+                QMessageBox.information(self, "Успех", f"Отчёт успешно сохранён: {file_path}")
+            else:
+                QMessageBox.warning(self, "Отмена", "Сохранение отменено.")
+
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
+        finally:
+            if connection:
+                connection.close()
