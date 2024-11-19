@@ -7,8 +7,9 @@ import sys
 
 
 class WindowForEmployee(QMainWindow):
-    def __init__(self, employee_id):
+    def __init__(self, employee_id, parent=None):
         super().__init__()
+        self.parent = parent
         self.employee_id = employee_id
         self.setWindowTitle("Окно сотрудника")
         self.setGeometry(100, 100, 800, 600)
@@ -39,14 +40,17 @@ class WindowForEmployee(QMainWindow):
 
         central_widget.setLayout(layout)
 
-        menubar = self.menuBar()  # Меню-бар
+        menubar = self.menuBar()
 
         # Меню "Файл"
-        file_menu = menubar.addMenu('Файл')  # Меню "Файл"
+        file_menu = menubar.addMenu('Файл')
+
+        change_user_action = QAction('Сменить пользователя', self)
+        change_user_action.triggered.connect(self.change_user)
+        file_menu.addAction(change_user_action)
 
         exit_action = QAction('Выход', self)
         exit_action.triggered.connect(self.close)
-
         file_menu.addAction(exit_action)
 
         # Меню "О программе"
@@ -56,8 +60,16 @@ class WindowForEmployee(QMainWindow):
         about_menu.addAction(about_action)
 
     def show_about_dialog(self):
-        """Показывает сообщение 'О программе'."""
         QMessageBox.information(self, "О программе", "Система управления заказами в ресторане.\nВерсия: 1.0")
+
+    def change_user(self):
+        """Смена пользователя."""
+        self.close()  # Закрываем текущее окно
+        if self.parent:
+            self.parent.reset()  # Очищаем поля ввода в окне авторизации
+            self.parent.show()  # Показываем окно авторизации
+        else:
+            QMessageBox.warning(self, "Ошибка", "Окно авторизации недоступно.")
 
     def show_menu(self):
         dialog = QDialog(self)

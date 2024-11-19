@@ -84,21 +84,26 @@ class PasswordWindow(QWidget):
                 conn.close()
 
     def open_user_window(self, role, user_id):
-        self.close()  # Закрываем окно авторизации
+        self.hide()  # Скрываем окно авторизации
 
-        # Храним ссылку на новое окно в атрибуте self
+        # Открываем соответствующее окно в зависимости от роли
         if role == "client":
-            self.user_window = WindowForClient(user_id)  # Передаем user_id
+            self.user_window = WindowForClient(user_id, parent=self)  # Передаем user_id и ссылку на родителя
         elif role == "admin":
-            self.user_window = WindowForAdmin()  # Для примера, если нужно
+            self.user_window = WindowForAdmin(parent=self)  # Передаем ссылку на родителя
         elif role == "employee":
-            self.user_window = WindowForEmployee(user_id)  # Для примера, если нужно
+            self.user_window = WindowForEmployee(user_id, parent=self)  # Передаем user_id и ссылку на родителя
         else:
             QMessageBox.warning(self, "Ошибка", f"Неизвестная роль: {role}")
             self.show()  # Снова показать окно авторизации, если роль не распознана
             return
 
         self.user_window.show()
+
+    def reset(self):
+        """Сбрасывает поля ввода."""
+        self.username_input.clear()
+        self.password_input.clear()
 
     def registration(self):
         self.hide()  # Скрываем окно авторизации
