@@ -19,7 +19,7 @@ class WindowForAdmin(QMainWindow):
 
         layout = QVBoxLayout()
 
-        self.result_table = QTextEdit()
+        self.result_table = QTableWidget()
         layout.addWidget(self.result_table)
 
         users = QPushButton('Пользователи')
@@ -575,27 +575,7 @@ class WindowForAdmin(QMainWindow):
     def view_orders(self):
         """Просмотр всех заказов."""
         try:
-            dialog = QDialog(self)
-            dialog.setWindowTitle("Просмотр заказов")
-            dialog.setGeometry(200, 150, 800, 600)
-
-            layout = QVBoxLayout(dialog)
-
-            # Таблица для отображения заказов
-            table = QTableWidget()
-            layout.addWidget(table)
-
-            # Загрузка данных заказов
-            self.load_orders(table)
-
-            # Кнопка закрытия
-            close_button = QPushButton("Закрыть")
-            close_button.clicked.connect(dialog.close)
-            layout.addWidget(close_button)
-
-            dialog.setLayout(layout)
-            dialog.exec()
-
+            self.load_orders(self.result_table)  # Загружаем данные в таблицу
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Произошла ошибка: {e}")
 
@@ -630,6 +610,8 @@ class WindowForAdmin(QMainWindow):
             for row_index, order in enumerate(orders):
                 for col_index, value in enumerate(order):
                     table.setItem(row_index, col_index, QTableWidgetItem(str(value) if value else "Нет данных"))
+
+            table.resizeColumnsToContents()  # Автоматически подгоняем ширину столбцов
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
