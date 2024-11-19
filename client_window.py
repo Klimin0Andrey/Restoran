@@ -484,25 +484,40 @@ class WindowForClient(QMainWindow):
             # Удаляем выбранную позицию
             cursor.execute("DELETE FROM OrderItems WHERE OrderItem_ID = ?", (item_id,))
 
-            # Пересчитываем общую стоимость заказа
+            # Проверяем, остались ли блюда в заказе
             cursor.execute("""
-                SELECT SUM(Quantity * Price) AS TotalAmount
+                SELECT COUNT(*)
                 FROM OrderItems
                 WHERE Order_ID = ?
             """, (order_id,))
-            new_total = cursor.fetchone()[0] or 0  # Если нет оставшихся блюд, устанавливаем 0
+            items_left = cursor.fetchone()[0]
 
-            # Обновляем общую стоимость заказа в таблице Orders
-            cursor.execute("""
-                UPDATE Orders
-                SET Total_Amount = ?
-                WHERE Order_ID = ?
-            """, (new_total, order_id))
+            if items_left == 0:
+                # Удаляем заказ, если больше нет блюд
+                cursor.execute("DELETE FROM Orders WHERE Order_ID = ?", (order_id,))
+                QMessageBox.information(self, "Успех", "Все блюда удалены. Заказ удалён.")
+                cart_table.clearContents()
+                cart_table.setRowCount(0)
+            else:
+                # Пересчитываем общую стоимость заказа
+                cursor.execute("""
+                    SELECT SUM(Quantity * Price) AS TotalAmount
+                    FROM OrderItems
+                    WHERE Order_ID = ?
+                """, (order_id,))
+                new_total = cursor.fetchone()[0] or 0  # Если нет оставшихся блюд, устанавливаем 0
+
+                # Обновляем общую стоимость заказа в таблице Orders
+                cursor.execute("""
+                    UPDATE Orders
+                    SET Total_Amount = ?
+                    WHERE Order_ID = ?
+                """, (new_total, order_id))
+
+                QMessageBox.information(self, "Успех", "Позиция удалена.")
+                self.update_cart_table(cart_table, order_id)  # Обновляем таблицу корзины
 
             connection.commit()
-
-            QMessageBox.information(self, "Успех", "Позиция удалена.")
-            self.update_cart_table(cart_table, order_id)  # Обновляем таблицу корзины
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -694,3 +709,4 @@ class WindowForClient(QMainWindow):
         finally:
             if connection:
                 connection.close()
+
