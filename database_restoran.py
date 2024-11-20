@@ -47,7 +47,7 @@ FOREIGN KEY (Customer_ID) REFERENCES Customers(Customer_ID),
 FOREIGN KEY (Employee_ID) REFERENCES Employees(Employee_ID));
 ''')
 
-# таблица Employees
+# Таблица Employees
 cursor.execute('''CREATE TABLE IF NOT EXISTS Employees (
     Employee_ID INTEGER PRIMARY KEY AUTOINCREMENT,
     First_name VARCHAR(50),
@@ -56,9 +56,8 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS Employees (
     Email VARCHAR(100),
     Login VARCHAR(50) UNIQUE,
     Password VARCHAR(100),
-    Role VARCHAR(20) NOT NULL); 
+    Role VARCHAR(20) NOT NULL); -- Пример: admin, waiter, manager(на данный момент admin and employee)
     ''')
-# # Пример: admin, waiter, manager
 
 # Таблица MenuItems
 cursor.execute('''
@@ -71,7 +70,7 @@ CREATE TABLE IF NOT EXISTS MenuItems (
 );
 ''')
 
-# таблица OrderItems
+# Таблица OrderItems
 cursor.execute('''CREATE TABLE IF NOT EXISTS OrderItems ( 
     OrderItem_ID INTEGER PRIMARY KEY AUTOINCREMENT,         
     Order_ID INT, 
@@ -94,7 +93,7 @@ CREATE TABLE IF NOT EXISTS MenuItemIngredients (
     FOREIGN KEY (Ingredient_ID) REFERENCES Ingredients(Ingredient_ID)
 );
 ''')
-# таблица Ingredients
+# Таблица Ingredients
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Ingredients (
     IngredientID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,9 +123,12 @@ tables_info = [
 employees_info = [('', '', '', '', 'admin', 'admin', 'admin'),
                   ('Иван', 'Смирнов', '+7 922 456 7890', 'ivan.smirnov@mail.com', 'ivan_smirnov', '12345', 'employee'),
                   ('Анна', 'Воронцова', '+7 942 678 9012', 'voroncova@mail.com', 'anna', 'qwerty', 'employee'),
-                  ('Екатерина', 'Каткова', '+7 932 567 8901', 'katerina.katkova@mail.com', 'katerina_katkova', 'Kat0k#2001', 'employee'),
-                  ('Максим', 'Соколов', '+7 952 789 0123', 'maxim.sokolov@mail.com', 'maxim_sokolov', 'Sok0lMax!2024', 'employee'),
-                  ('Ольга', 'Новикова', '+7 962 890 1234', 'olga.novikova@mail.com', 'olga_novikova', 'Nov1kOlg@2000', 'employee'),
+                  ('Екатерина', 'Каткова', '+7 932 567 8901', 'katerina.katkova@mail.com', 'katerina_katkova',
+                   'Kat0k#2001', 'employee'),
+                  ('Максим', 'Соколов', '+7 952 789 0123', 'maxim.sokolov@mail.com', 'maxim_sokolov', 'Sok0lMax!2024',
+                   'employee'),
+                  ('Ольга', 'Новикова', '+7 962 890 1234', 'olga.novikova@mail.com', 'olga_novikova', 'Nov1kOlg@2000',
+                   'employee'),
                   ('Дмитрий', 'Кузнецов', '+7 916 045 1456', 'kuznetsov@mail.com', 'dima_k', 'abcde', 'employee')]
 
 menu_items = [

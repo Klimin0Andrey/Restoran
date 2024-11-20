@@ -1,22 +1,21 @@
 import sqlite3
-from PyQt6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget, QTextEdit
+from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget, QTextEdit, QMainWindow, QMessageBox, QDialog, QPushButton, \
+    QTableWidget, QTableWidgetItem, QInputDialog
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMainWindow, QMenuBar, QMessageBox, QApplication, QDialog, QPushButton, QTableWidget, \
-    QTableWidgetItem, QInputDialog
-import sys
 
 
+# Окно Сотрудника
 class WindowForEmployee(QMainWindow):
     def __init__(self, employee_id, parent=None):
         super().__init__()
         self.parent = parent
         self.employee_id = employee_id
         self.setWindowTitle("Окно сотрудника")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(360, 150, 800, 600)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
+        # Основные виджеты
         layout = QVBoxLayout()
 
         self.result_table = QTextEdit()
@@ -39,10 +38,9 @@ class WindowForEmployee(QMainWindow):
         layout.addWidget(bill)
 
         central_widget.setLayout(layout)
-
+        # Меню для окна сотрудника
         menubar = self.menuBar()
 
-        # Меню "Файл"
         file_menu = menubar.addMenu('Файл')
 
         change_user_action = QAction('Сменить пользователя', self)
@@ -62,6 +60,7 @@ class WindowForEmployee(QMainWindow):
     def show_about_dialog(self):
         QMessageBox.information(self, "О программе", "Система управления заказами в ресторане.\nВерсия: 1.0")
 
+    # Функция смены пользователя
     def change_user(self):
         """Смена пользователя."""
         self.close()  # Закрываем текущее окно
@@ -71,10 +70,11 @@ class WindowForEmployee(QMainWindow):
         else:
             QMessageBox.warning(self, "Ошибка", "Окно авторизации недоступно.")
 
+    # Функционал кнопки "Меню ресторана"
     def show_menu(self):
         dialog = QDialog(self)
         dialog.setWindowTitle('Меню ресторана')
-        dialog.setGeometry(220, 165, 600, 400)
+        dialog.setGeometry(485, 220, 550, 400)
 
         layout = QVBoxLayout(dialog)
         info_label = QLabel("Просмотр меню ресторана:")
@@ -94,6 +94,7 @@ class WindowForEmployee(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec()
 
+    # Функция отображения пунктов меню
     def display_menu_by_category(self, menu_table):
         try:
             # Подключаемся к базе данных
@@ -123,8 +124,11 @@ class WindowForEmployee(QMainWindow):
             menu_table.setRowCount(len(menu_items))
             menu_table.setColumnCount(4)
             menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена"])
-            menu_table.setColumnWidth(1, 220)  # Устанавливаем ширину столбца "Название" (индекс 1) в 200 пикселей
-            menu_table.setColumnWidth(2, 150)  # Устанавливаем ширину столбца "Название" (индекс 1) в 200 пикселей
+
+            menu_table.setColumnWidth(0, 40)  # ID
+            menu_table.setColumnWidth(1, 215)  # Название
+            menu_table.setColumnWidth(2, 150)  # Описание
+            menu_table.setColumnWidth(3, 80)  # Цена
 
             for row_index, item in enumerate(menu_items):
                 for col_index, value in enumerate(item):
@@ -161,12 +165,18 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Принять заказ")
+            dialog.setGeometry(520, 210, 480, 400)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
             table_widget.setRowCount(len(orders))
             table_widget.setColumnCount(4)
             table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Дата заказа"])
+            table_widget.setColumnWidth(0, 100)  # ID
+            table_widget.setColumnWidth(1, 100)  # Название
+            table_widget.setColumnWidth(2, 100)  # Описание
+            table_widget.setColumnWidth(3, 130)  # Цена
+
             layout.addWidget(table_widget)
 
             # Заполнение таблицы доступных заказов
@@ -195,6 +205,7 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция позволяет сотруднику выбрать заказ из списка и закрепить его за собой
     def assign_order_to_employee(self, table_widget, dialog):
         try:
             selected_row = table_widget.currentRow()
@@ -247,6 +258,7 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция обновления заказов
     def refresh_orders(self, table_widget):
         try:
             connection = sqlite3.connect("restoran.db")
@@ -279,6 +291,7 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция для смены статуса заказа
     def change_status(self):
         try:
             # Подключение к базе данных
@@ -300,12 +313,16 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Изменить статус заказа")
+            dialog.setGeometry(495, 280, 530, 300)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
             table_widget.setRowCount(len(orders))
             table_widget.setColumnCount(5)
             table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Статус", "Дата заказа"])
+            table_widget.setColumnWidth(0, 80)
+            table_widget.setColumnWidth(1, 80)
+            table_widget.setColumnWidth(4, 120)
             layout.addWidget(table_widget)
 
             # Заполнение таблицы принятых заказов
@@ -337,6 +354,7 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция обновления статуса заказа
     def update_order_status(self, table_widget):
         try:
             selected_row = table_widget.currentRow()
@@ -393,8 +411,8 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция для выбора и отображения счётв для авторизованного сотрудника
     def issue_an_bill(self):
-        """Позволяет выбрать заказ и отобразить счёт для авторизованного сотрудника."""
         try:
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
@@ -414,6 +432,7 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Выбрать заказ для счета")
+            dialog.setGeometry(535, 290, 460, 300)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
@@ -451,8 +470,8 @@ class WindowForEmployee(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция отображает счёт для выбранного заказа.
     def show_order_bill(self, table_widget, dialog):
-        """Отображает счёт для выбранного заказа."""
         try:
             selected_row = table_widget.currentRow()
             if selected_row == -1:
@@ -532,5 +551,3 @@ class WindowForEmployee(QMainWindow):
         finally:
             if connection:
                 connection.close()
-
-

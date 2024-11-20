@@ -1,13 +1,13 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QMessageBox, QDialog, QDateEdit, QTableWidget,
-    QTableWidgetItem, QTextEdit, QApplication, QInputDialog
+    QTableWidgetItem, QTextEdit, QInputDialog, QApplication
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QDate
 import sqlite3
-import sys
 
 
+# Окно Клиента
 class WindowForClient(QMainWindow):
     def __init__(self, user_id, parent=None):
         super().__init__()
@@ -15,11 +15,11 @@ class WindowForClient(QMainWindow):
         self.user_id = user_id  # Сохраняем текущего пользователя
         self.current_order = []
         self.setWindowTitle("Окно клиента")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(360, 150, 800, 600)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
+        # Основные виджеты
         layout = QVBoxLayout()
 
         self.result_table = QTableWidget()
@@ -83,6 +83,7 @@ class WindowForClient(QMainWindow):
     def book_table_result(self):
         dialog = QDialog(self)
         dialog.setWindowTitle('Просмотр свободных столиков')
+        dialog.setGeometry(580, 230, 365, 400)
 
         layout = QVBoxLayout(dialog)
 
@@ -113,6 +114,7 @@ class WindowForClient(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec()
 
+    # Функция показывает свободные столики
     def display_available_tables(self, selected_date, table_widget):
         try:
             connection = sqlite3.connect("restoran.db")
@@ -171,7 +173,7 @@ class WindowForClient(QMainWindow):
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
 
-            # Запрашиваем количество людей (можно добавить отдельный ввод)
+            # Запрашиваем количество людей
             num_people, ok = QInputDialog.getInt(self, "Количество людей", "Введите количество людей:")
             if not ok or num_people <= 0:
                 QMessageBox.warning(self, "Ошибка", "Введите корректное количество людей.")
@@ -194,9 +196,11 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция реализует кнопку "Сделать зказ"
     def order_maker(self):
         dialog = QDialog(self)
         dialog.setWindowTitle('Сделать заказ')
+        dialog.setGeometry(485, 230, 550, 400)
 
         layout = QVBoxLayout(dialog)
         info_label = QLabel("Просмотр меню ресторана:")
@@ -224,6 +228,7 @@ class WindowForClient(QMainWindow):
         dialog.setLayout(layout)
         dialog.exec()
 
+    # Функция показывает меню ресторана по категориям
     def display_menu_by_category(self, menu_table):
         try:
             # Подключаемся к базе данных
@@ -254,6 +259,11 @@ class WindowForClient(QMainWindow):
             menu_table.setColumnCount(4)
             menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена"])
 
+            menu_table.setColumnWidth(0, 40)  # ID
+            menu_table.setColumnWidth(1, 215)  # Название
+            menu_table.setColumnWidth(2, 150)  # Описание
+            menu_table.setColumnWidth(3, 80)  # Цена
+
             for row_index, item in enumerate(menu_items):
                 for col_index, value in enumerate(item):
                     menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
@@ -268,6 +278,7 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция добавления блюд в заказ
     def add_menu_item_to_order(self, menu_table):
         try:
             selected_row = menu_table.currentRow()
@@ -384,12 +395,12 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция редактирования Корзины пользователя
     def edit_shop_crt(self):
         try:
             connection = sqlite3.connect("restoran.db")
             cursor = connection.cursor()
 
-            # Замените на реальный ID текущего клиента
             current_customer_id = self.user_id
 
             # Получение последнего заказа текущего клиента со статусом "Pending"
@@ -423,6 +434,7 @@ class WindowForClient(QMainWindow):
             # Создаем диалог для редактирования
             dialog = QDialog(self)
             dialog.setWindowTitle("Редактировать корзину")
+            dialog.setGeometry(535, 290, 460, 300)
             layout = QVBoxLayout(dialog)
 
             # Таблица для отображения корзины
@@ -468,6 +480,7 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Функция удаления позиции зказа из Корзины пользователя
     def remove_cart_item(self, cart_table, order_id):
         try:
             selected_row = cart_table.currentRow()
@@ -529,6 +542,7 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Сохранение Корзины пользователя
     def save_cart_changes(self, cart_table, order_id):
         try:
             connection = sqlite3.connect("restoran.db")
@@ -562,6 +576,7 @@ class WindowForClient(QMainWindow):
             if connection:
                 connection.close()
 
+    # Обновление Корзины пользователя
     def update_cart_table(self, cart_table, order_id):
         try:
             connection = sqlite3.connect("restoran.db")
@@ -709,4 +724,3 @@ class WindowForClient(QMainWindow):
         finally:
             if connection:
                 connection.close()
-

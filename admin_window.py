@@ -1,23 +1,22 @@
 import sqlite3
-from PyQt6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QMainWindow, QLabel, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem, QPushButton, \
+    QDialog, QInputDialog, QLineEdit, \
+    QHBoxLayout, QFileDialog, QMessageBox, QTextEdit
 from openpyxl import Workbook
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QVBoxLayout, QPushButton, QDialog, QInputDialog, QLineEdit, \
-    QHBoxLayout, QFileDialog, QMessageBox
-from PyQt6.QtWidgets import QMainWindow, QMenuBar, QMessageBox, QApplication, QDialog, QPushButton, QTextEdit
-import sys
 
 
+# Окно Администратора
 class WindowForAdmin(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent  # Сохраняем ссылку на родительское окно
         self.setWindowTitle("Окно администратора")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(360, 150, 800, 600)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
+        # Основные виджеты
         layout = QVBoxLayout()
 
         self.result_table = QTextEdit()
@@ -40,10 +39,9 @@ class WindowForAdmin(QMainWindow):
         layout.addWidget(reports)
 
         central_widget.setLayout(layout)
-
+        # Меню для окна администратора
         menubar = self.menuBar()
 
-        # Меню "Файл"
         file_menu = menubar.addMenu('Файл')
 
         change_user_action = QAction('Сменить пользователя', self)
@@ -63,8 +61,8 @@ class WindowForAdmin(QMainWindow):
     def show_about_dialog(self):
         QMessageBox.information(self, "О программе", "Система управления заказами в ресторане.\nВерсия: 1.0")
 
+    # Смена пользователя
     def change_user(self):
-        """Смена пользователя."""
         self.close()  # Закрываем текущее окно
         if self.parent:
             self.parent.reset()  # Очищаем поля ввода в окне авторизации
@@ -77,7 +75,7 @@ class WindowForAdmin(QMainWindow):
         try:
             dialog = QDialog(self)
             dialog.setWindowTitle("Управление пользователями")
-            dialog.setGeometry(200, 150, 600, 400)
+            dialog.setGeometry(460, 220, 600, 400)
 
             layout = QVBoxLayout(dialog)
 
@@ -354,7 +352,7 @@ class WindowForAdmin(QMainWindow):
         try:
             dialog = QDialog(self)
             dialog.setWindowTitle("Управление меню")
-            dialog.setGeometry(200, 150, 700, 500)
+            dialog.setGeometry(477, 200, 565, 500)
 
             layout = QVBoxLayout(dialog)
 
@@ -578,7 +576,7 @@ class WindowForAdmin(QMainWindow):
         try:
             dialog = QDialog(self)
             dialog.setWindowTitle("Просмотр заказов")
-            dialog.setGeometry(200, 150, 800, 600)
+            dialog.setGeometry(480, 290, 565, 300)
 
             layout = QVBoxLayout(dialog)
 
@@ -627,6 +625,13 @@ class WindowForAdmin(QMainWindow):
             table.setHorizontalHeaderLabels([
                 "ID заказа", "Клиент", "Сотрудник", "Дата заказа", "Сумма", "Статус"
             ])
+
+            table.setColumnWidth(0, 60)  # ID
+            table.setColumnWidth(1, 100)  # Название
+            table.setColumnWidth(2, 120)  # Описание
+            table.setColumnWidth(3, 80)  # Дата заказа
+            table.setColumnWidth(4, 80)  # сумма
+            table.setColumnWidth(5, 80)  # статус
 
             for row_index, order in enumerate(orders):
                 for col_index, value in enumerate(order):

@@ -1,20 +1,21 @@
 import sqlite3
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 
 from client_window import WindowForClient
 from admin_window import WindowForAdmin
 from employee_window import WindowForEmployee
 
 
+# Основное окно Авторизации
 class PasswordWindow(QWidget):
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Авторизация")
-        self.setGeometry(100, 100, 300, 150)
+        self.setGeometry(618, 357, 300, 150)
 
-        layout = QVBoxLayout()
+        layout = QVBoxLayout()  # Расположение основных виджетов в окне авторизации
 
         self.username_label = QLabel("Логин:")
         self.username_input = QLineEdit()
@@ -39,6 +40,7 @@ class PasswordWindow(QWidget):
 
         self.setLayout(layout)
 
+    # Функция для проверки логина и пароля пользователя
     def check_password(self):
         username = self.username_input.text()
         password = self.password_input.text()
@@ -48,7 +50,7 @@ class PasswordWindow(QWidget):
             return
 
         try:
-            conn = sqlite3.connect("restoran.db")  # Замените на путь к вашей базе данных
+            conn = sqlite3.connect("restoran.db")
             cursor = conn.cursor()
 
             # Проверяем пользователя среди клиентов
@@ -75,7 +77,7 @@ class PasswordWindow(QWidget):
                 self.open_user_window(role, user_id)
                 return
 
-            # Если пользователь не найден
+            # Если пользователь не найден, выводим диалоговое окно с информацией
             QMessageBox.critical(self, "Ошибка", "Неверный логин или пароль.")
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка работы с базой данных: {e}")
@@ -83,16 +85,17 @@ class PasswordWindow(QWidget):
             if conn:
                 conn.close()
 
+    # Функция для открытия окна пользователя в зависимости от роли
     def open_user_window(self, role, user_id):
         self.hide()  # Скрываем окно авторизации
 
         # Открываем соответствующее окно в зависимости от роли
         if role == "client":
-            self.user_window = WindowForClient(user_id, parent=self)  # Передаем user_id и ссылку на родителя
+            self.user_window = WindowForClient(user_id, parent=self)
         elif role == "admin":
-            self.user_window = WindowForAdmin(parent=self)  # Передаем ссылку на родителя
+            self.user_window = WindowForAdmin(parent=self)
         elif role == "employee":
-            self.user_window = WindowForEmployee(user_id, parent=self)  # Передаем user_id и ссылку на родителя
+            self.user_window = WindowForEmployee(user_id, parent=self)
         else:
             QMessageBox.warning(self, "Ошибка", f"Неизвестная роль: {role}")
             self.show()  # Снова показать окно авторизации, если роль не распознана
@@ -100,11 +103,13 @@ class PasswordWindow(QWidget):
 
         self.user_window.show()
 
+    # Функция для сброса данных в окне авторизации при смене пользователя
     def reset(self):
         """Сбрасывает поля ввода."""
         self.username_input.clear()
         self.password_input.clear()
 
+    # Функция открывает окно регистрации
     def registration(self):
         self.hide()  # Скрываем окно авторизации
         self.register_window = RegisterWindow(self)  # Создаем окно регистрации
@@ -118,9 +123,9 @@ class RegisterWindow(QWidget):
         self.parent = parent  # Передаем родительское окно (авторизацию)
 
         self.setWindowTitle("Регистрация")
-        self.setGeometry(100, 100, 300, 250)
+        self.setGeometry(618, 250, 300, 250)
 
-        layout = QVBoxLayout()
+        layout = QVBoxLayout()  # Основные виджеты
 
         self.firstname_label = QLabel("Имя:")
         self.firstname_input = QLineEdit()
@@ -139,7 +144,7 @@ class RegisterWindow(QWidget):
         self.register_button = QPushButton("Зарегистрироваться")
         self.register_button.clicked.connect(self.register_user)
 
-        self.back_button = QPushButton("Назад")  # Кнопка "Назад"
+        self.back_button = QPushButton("Назад")
         self.back_button.clicked.connect(self.go_back)
 
         layout.addWidget(self.firstname_label)
@@ -167,15 +172,13 @@ class RegisterWindow(QWidget):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        # Здесь можно добавить код для регистрации в базу данных (например, SQLite)
-        # Для простоты предполагаем, что регистрация прошла успешно:
         if not all([firstname, lastname, phone, email, username, password]):
             QMessageBox.warning(self, "Ошибка", "Заполните все поля!")
             return
 
             # Подключение к базе данных
         try:
-            conn = sqlite3.connect("restoran.db")  # Замените на путь к вашей базе данных
+            conn = sqlite3.connect("restoran.db")
             cursor = conn.cursor()
 
             # Проверяем, нет ли уже такого логина или email
