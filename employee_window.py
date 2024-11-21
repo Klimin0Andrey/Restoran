@@ -74,7 +74,7 @@ class WindowForEmployee(QMainWindow):
     def show_menu(self):
         dialog = QDialog(self)
         dialog.setWindowTitle('Меню ресторана')
-        dialog.setGeometry(485, 220, 550, 400)
+        dialog.setGeometry(488, 220, 550, 400)
 
         layout = QVBoxLayout(dialog)
         info_label = QLabel("Просмотр меню ресторана:")
@@ -123,7 +123,7 @@ class WindowForEmployee(QMainWindow):
             # Настраиваем таблицу
             menu_table.setRowCount(len(menu_items))
             menu_table.setColumnCount(4)
-            menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена"])
+            menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена, руб."])
 
             menu_table.setColumnWidth(0, 40)  # ID
             menu_table.setColumnWidth(1, 215)  # Название
@@ -132,7 +132,12 @@ class WindowForEmployee(QMainWindow):
 
             for row_index, item in enumerate(menu_items):
                 for col_index, value in enumerate(item):
-                    menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    if col_index == 3:  # Столбец "Цена"
+                        formatted_value = f"{float(value):.2f}"  # Форматируем значение как число с плавающей точкой
+                        menu_table.setItem(row_index, col_index, QTableWidgetItem(formatted_value))
+                    else:
+                        menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -165,16 +170,16 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Принять заказ")
-            dialog.setGeometry(520, 210, 480, 400)
+            dialog.setGeometry(518, 210, 490, 400)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
             table_widget.setRowCount(len(orders))
             table_widget.setColumnCount(4)
-            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Дата заказа"])
-            table_widget.setColumnWidth(0, 100)  # ID
-            table_widget.setColumnWidth(1, 100)  # Название
-            table_widget.setColumnWidth(2, 100)  # Описание
+            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма, руб.", "Дата заказа"])
+            table_widget.setColumnWidth(0, 100)  # ID заказа
+            table_widget.setColumnWidth(1, 100)  # ID клиента
+            table_widget.setColumnWidth(2, 120)  # Общая сумма
             table_widget.setColumnWidth(3, 130)  # Цена
 
             layout.addWidget(table_widget)
@@ -313,15 +318,16 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Изменить статус заказа")
-            dialog.setGeometry(495, 280, 530, 300)
+            dialog.setGeometry(487, 280, 550, 300)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
             table_widget.setRowCount(len(orders))
             table_widget.setColumnCount(5)
-            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Статус", "Дата заказа"])
-            table_widget.setColumnWidth(0, 80)
-            table_widget.setColumnWidth(1, 80)
+            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма, руб.", "Статус", "Дата заказа"])
+            table_widget.setColumnWidth(0, 80) # ID заказа
+            table_widget.setColumnWidth(1, 80) # ID клиента
+            table_widget.setColumnWidth(2, 115) # ID клиента
             table_widget.setColumnWidth(4, 120)
             layout.addWidget(table_widget)
 
@@ -432,20 +438,24 @@ class WindowForEmployee(QMainWindow):
             # Создаем диалог для выбора заказа
             dialog = QDialog(self)
             dialog.setWindowTitle("Выбрать заказ для счета")
-            dialog.setGeometry(535, 290, 460, 300)
+            dialog.setGeometry(535, 290, 450, 300)
             layout = QVBoxLayout(dialog)
 
             table_widget = QTableWidget()
             table_widget.setRowCount(len(orders))
             table_widget.setColumnCount(4)
-            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма", "Статус заказа"])
+            table_widget.setHorizontalHeaderLabels(["ID заказа", "ID клиента", "Общая сумма, руб.", "Статус заказа"])
+            table_widget.setColumnWidth(0, 80)  # ID заказа
+            table_widget.setColumnWidth(1, 80)  # ID клиента
+            table_widget.setColumnWidth(2, 120)  # Общая сумма, руб.
+            table_widget.setColumnWidth(3, 110)  # Статус заказа
             layout.addWidget(table_widget)
 
             # Заполняем таблицу заказов
             for row_index, (order_id, customer_id, total_amount, status) in enumerate(orders):
                 table_widget.setItem(row_index, 0, QTableWidgetItem(str(order_id)))
                 table_widget.setItem(row_index, 1, QTableWidgetItem(str(customer_id)))
-                table_widget.setItem(row_index, 2, QTableWidgetItem(f"{total_amount:.2f} руб."))
+                table_widget.setItem(row_index, 2, QTableWidgetItem(f"{total_amount:.2f}"))
                 table_widget.setItem(row_index, 3, QTableWidgetItem(status))
 
             # Кнопка для подтверждения выбора

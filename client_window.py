@@ -24,7 +24,11 @@ class WindowForClient(QMainWindow):
 
         self.result_table = QTableWidget()
         self.result_table.setColumnCount(4)
-        self.result_table.setHorizontalHeaderLabels(["Количество", "Название", "Цена за единицу", "Итого"])
+        self.result_table.setHorizontalHeaderLabels(["Количество", "Название", "Цена за единицу, руб.", "Итого, руб."])
+        self.result_table.setColumnWidth(0, 80)  # Количество
+        self.result_table.setColumnWidth(1, 250)  # Название
+        self.result_table.setColumnWidth(2, 150)  # Цена за единицу, руб.
+        self.result_table.setColumnWidth(3, 100)  # Итого, руб.
         layout.addWidget(self.result_table)
 
         book_table_button = QPushButton('Забронировать столик')
@@ -83,7 +87,7 @@ class WindowForClient(QMainWindow):
     def book_table_result(self):
         dialog = QDialog(self)
         dialog.setWindowTitle('Просмотр свободных столиков')
-        dialog.setGeometry(580, 230, 365, 400)
+        dialog.setGeometry(578, 230, 365, 400)
 
         layout = QVBoxLayout(dialog)
 
@@ -257,7 +261,7 @@ class WindowForClient(QMainWindow):
             # Настраиваем таблицу
             menu_table.setRowCount(len(menu_items))
             menu_table.setColumnCount(4)
-            menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена"])
+            menu_table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена, руб."])
 
             menu_table.setColumnWidth(0, 40)  # ID
             menu_table.setColumnWidth(1, 215)  # Название
@@ -266,7 +270,13 @@ class WindowForClient(QMainWindow):
 
             for row_index, item in enumerate(menu_items):
                 for col_index, value in enumerate(item):
-                    menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    if col_index == 3:  # Столбец "Цена"
+                        formatted_value = f"{float(value):.2f}"  # Форматируем значение как число с плавающей точкой
+                        menu_table.setItem(row_index, col_index, QTableWidgetItem(formatted_value))
+                    else:
+                        menu_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
+
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -434,13 +444,17 @@ class WindowForClient(QMainWindow):
             # Создаем диалог для редактирования
             dialog = QDialog(self)
             dialog.setWindowTitle("Редактировать корзину")
-            dialog.setGeometry(535, 290, 460, 300)
+            dialog.setGeometry(507, 290, 510, 300)
             layout = QVBoxLayout(dialog)
 
             # Таблица для отображения корзины
             cart_table = QTableWidget()
             cart_table.setColumnCount(4)
-            cart_table.setHorizontalHeaderLabels(["ID позиции", "Название", "Количество", "Цена за единицу"])
+            cart_table.setHorizontalHeaderLabels(["ID позиции", "Название", "Количество", "Цена за единицу, руб."])
+            cart_table.setColumnWidth(0, 80)  # ID позиции
+            cart_table.setColumnWidth(1, 165)  # Название
+            cart_table.setColumnWidth(2, 80)  # Количество
+            cart_table.setColumnWidth(3, 130)  # Цена за единицу, руб.
             cart_table.setRowCount(len(order_items))
 
             # Заполняем таблицу

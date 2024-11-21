@@ -404,11 +404,16 @@ class WindowForAdmin(QMainWindow):
             # Настраиваем таблицу
             table.setRowCount(len(menu_items))
             table.setColumnCount(len(menu_items[0]))
-            table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена", "Категория"])
+            table.setHorizontalHeaderLabels(["ID", "Название", "Описание", "Цена, руб.", "Категория"])
 
             for row_index, item in enumerate(menu_items):
                 for col_index, value in enumerate(item):
-                    table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    if col_index == 3:  # Столбец "Цена"
+                        formatted_value = f"{float(value):.2f}"  # Форматируем значение как число с плавающей точкой
+                        table.setItem(row_index, col_index, QTableWidgetItem(formatted_value))
+                    else:
+                        table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
@@ -623,7 +628,7 @@ class WindowForAdmin(QMainWindow):
             table.setRowCount(len(orders))
             table.setColumnCount(6)
             table.setHorizontalHeaderLabels([
-                "ID заказа", "Клиент", "Сотрудник", "Дата заказа", "Сумма", "Статус"
+                "ID заказа", "Клиент", "Сотрудник", "Дата заказа", "Сумма, руб.", "Статус"
             ])
 
             table.setColumnWidth(0, 60)  # ID
@@ -635,7 +640,15 @@ class WindowForAdmin(QMainWindow):
 
             for row_index, order in enumerate(orders):
                 for col_index, value in enumerate(order):
-                    table.setItem(row_index, col_index, QTableWidgetItem(str(value) if value else "Нет данных"))
+                    if col_index == 4:  # Столбец "Цена"
+                        formatted_value = f"{float(value):.2f}"  # Форматируем значение как число с плавающей точкой
+                        table.setItem(row_index, col_index, QTableWidgetItem(formatted_value))
+                    else:
+                        table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
+            # for row_index, order in enumerate(orders):
+            #     for col_index, value in enumerate(order):
+            #         table.setItem(row_index, col_index, QTableWidgetItem(str(value) if value else "Нет данных"))
 
         except sqlite3.Error as e:
             QMessageBox.critical(self, "Ошибка базы данных", f"Ошибка: {e}")
