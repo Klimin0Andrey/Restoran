@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QMessageBox, QLineEdit
 
 from client_window import WindowForClient
@@ -165,18 +166,27 @@ class RegisterWindow(QWidget):
         self.setLayout(layout)
 
     def register_user(self):
-        firstname = self.firstname_input.text()
-        lastname = self.lastname_input.text()
-        phone = self.phone_input.text()
-        email = self.email_input.text()
-        username = self.username_input.text()
-        password = self.password_input.text()
+        firstname = self.firstname_input.text().strip()
+        lastname = self.lastname_input.text().strip()
+        phone = self.phone_input.text().strip()
+        email = self.email_input.text().strip()
+        username = self.username_input.text().strip()
+        password = self.password_input.text().strip()
 
+        # Проверка, что все поля заполнены
         if not all([firstname, lastname, phone, email, username, password]):
             QMessageBox.warning(self, "Ошибка", "Заполните все поля!")
             return
 
-            # Подключение к базе данных
+        # Проверка, что имя и фамилия состоят только из букв
+        if not (firstname.isalpha() and lastname.isalpha()):
+            QMessageBox.warning(self, "Ошибка", "Поля 'Имя' и 'Фамилия' должны содержать только буквы!")
+            return
+        if len(firstname) >= 64 and len(lastname) >= 64:
+            QMessageBox.warning(self, "Ошибка", "Некорректный ввод данных, проверьте данные")
+            return
+
+        # Подключение к базе данных
         try:
             conn = sqlite3.connect("restoran.db")
             cursor = conn.cursor()
@@ -184,7 +194,7 @@ class RegisterWindow(QWidget):
             # Проверяем, нет ли уже такого логина или email
             cursor.execute("SELECT * FROM Customers WHERE Login = ? OR Email = ?", (username, email))
             if cursor.fetchone():
-                QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином или email уже существует!")
+                QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином или e-mail уже существует!")
                 return
 
             # Вставка нового пользователя
@@ -197,9 +207,12 @@ class RegisterWindow(QWidget):
             conn.commit()
             QMessageBox.information(self, "Успех", "Регистрация прошла успешно!")
 
-            # Закрываем окно регистрации
+            # Закрываем текущее окно регистрации
             self.close()
+
+            # Возвращаемся к родительскому окну, если оно задано
             if self.parent:
+                self.parent.reset()  # Сбрасываем поля родительского окна
                 self.parent.show()
 
         except sqlite3.Error as e:

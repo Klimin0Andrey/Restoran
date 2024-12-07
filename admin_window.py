@@ -34,7 +34,7 @@ class WindowForAdmin(QMainWindow):
         orders.clicked.connect(self.view_orders)
         layout.addWidget(orders)
 
-        reports = QPushButton('Отчеты и аналитика')
+        reports = QPushButton('Отчёты и аналитика')
         reports.clicked.connect(self.reports_in_excel)
         layout.addWidget(reports)
 
@@ -679,7 +679,7 @@ class WindowForAdmin(QMainWindow):
             cursor.execute(query_revenue)
             revenue_data = cursor.fetchall()
 
-            sheet_revenue.append(["Дата", "Выручка"])
+            sheet_revenue.append(["Дата", "Выручка, руб."])
             for row in revenue_data:
                 sheet_revenue.append(row)
 
@@ -714,7 +714,7 @@ class WindowForAdmin(QMainWindow):
             cursor.execute(query_avg_check)
             avg_check_data = cursor.fetchall()
 
-            sheet_avg_check.append(["Дата", "Средний чек"])
+            sheet_avg_check.append(["Дата", "Средний чек, руб."])
             for row in avg_check_data:
                 sheet_avg_check.append(row)
 
