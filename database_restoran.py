@@ -84,7 +84,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS OrderItems (
 # Таблица MenuItemIngredient
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS MenuItemIngredients (
-    MenuItem_ID INT,
+    MenuItem_ID INT,    
     Ingredient_ID INTEGER,
     Quantity DECIMAL(10, 2) NOT NULL,
     Unit VARCHAR(20) NOT NULL,
